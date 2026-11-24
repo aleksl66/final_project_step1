@@ -15,3 +15,7 @@
 
 ```bash
 go run main.go
+
+## Сборка и запуск DOCKER
+
+docker build -t todo-scheduler:v1 .
