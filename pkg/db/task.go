@@ -3,8 +3,18 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
+
+// Task описывает задачу планировщика.
+type Task struct {
+	ID      string `json:"id"`
+	Date    string `json:"date"`
+	Title   string `json:"title"`
+	Comment string `json:"comment"`
+	Repeat  string `json:"repeat"`
+}
 
 // DeleteTask удаляет задачу по идентификатору.
 func DeleteTask(id string) error {
@@ -69,15 +79,6 @@ func UpdateTask(task *Task) error {
 	return nil
 }
 
-// Task описывает задачу планировщика.
-type Task struct {
-	ID      string `json:"id"`
-	Date    string `json:"date"`
-	Title   string `json:"title"`
-	Comment string `json:"comment"`
-	Repeat  string `json:"repeat"`
-}
-
 // AddTask добавляет задачу в таблицу scheduler и возвращает её идентификатор.
 func AddTask(task *Task) (int64, error) {
 	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
@@ -89,8 +90,9 @@ func AddTask(task *Task) (int64, error) {
 }
 
 // Tasks возвращает ближайшие задачи, отсортированные по дате.
-// search — необязательная строка поиска (по title/comment или по дате dd.mm.yyyy).
 func Tasks(limit int, search string) ([]*Task, error) {
+	search = strings.TrimSpace(search)
+
 	var (
 		query string
 		args  []any
@@ -99,16 +101,17 @@ func Tasks(limit int, search string) ([]*Task, error) {
 	if search == "" {
 		query = `SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT ?`
 		args = []any{limit}
-	} else if d, ok := parseSearchDate(search); ok {
-		// Поиск по конкретной дате
-		query = `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?`
-		args = []any{d, limit}
 	} else {
-		// Поиск по подстроке в title или comment
-		like := "%" + search + "%"
-		query = `SELECT id, date, title, comment, repeat FROM scheduler
-		         WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?`
-		args = []any{like, like, limit}
+		d, ok := parseSearchDate(search)
+		if ok {
+			query = `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?`
+			args = []any{d, limit}
+		} else {
+			like := "%" + search + "%"
+			query = `SELECT id, date, title, comment, repeat FROM scheduler
+			         WHERE LOWER(title) LIKE LOWER(?) OR LOWER(comment) LIKE LOWER(?) ORDER BY date LIMIT ?`
+			args = []any{like, like, limit}
+		}
 	}
 
 	rows, err := db.Query(query, args...)
@@ -117,7 +120,7 @@ func Tasks(limit int, search string) ([]*Task, error) {
 	}
 	defer rows.Close()
 
-	tasks := make([]*Task, 0) // не nil, чтобы в JSON было []
+	tasks := make([]*Task, 0)
 	for rows.Next() {
 		t := &Task{}
 		if err := rows.Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat); err != nil {
@@ -131,8 +134,7 @@ func Tasks(limit int, search string) ([]*Task, error) {
 	return tasks, nil
 }
 
-// parseSearchDate проверяет, является ли строка датой в формате 02.01.2006,
-// и возвращает её в формате 20060102.
+// parseSearchDate проверяет формат 02.01.2006 и возвращает 20060102.
 func parseSearchDate(s string) (string, bool) {
 	t, err := time.Parse("02.01.2006", s)
 	if err != nil {

@@ -106,7 +106,6 @@ func nextDateByWeekdays(now, date time.Time, parts []string) (string, error) {
 	return date.Format(dateFormat), nil
 }
 
-// nextDateByMonths обрабатывает правило "m <дни месяца> [месяцы]".
 func nextDateByMonths(now, date time.Time, parts []string) (string, error) {
 	if len(parts) < 2 || len(parts) > 3 {
 		return "", errors.New("правило m должно содержать дни месяца и опционально месяцы")
@@ -134,7 +133,8 @@ func nextDateByMonths(now, date time.Time, parts []string) (string, error) {
 		}
 	}
 
-	for {
+	const maxIter = 366 * 5
+	for i := 0; i < maxIter; i++ {
 		date = date.AddDate(0, 0, 1)
 
 		if !allMonths && !months[int(date.Month())] {
@@ -159,10 +159,10 @@ func nextDateByMonths(now, date time.Time, parts []string) (string, error) {
 		}
 
 		if match && afterNow(date, now) {
-			break
+			return date.Format(dateFormat), nil
 		}
 	}
-	return date.Format(dateFormat), nil
+	return "", errors.New("не найдена подходящая дата в указанных месяцах")
 }
 
 // nextDateHandler обрабатывает GET /api/nextdate?now=&date=&repeat=

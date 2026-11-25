@@ -3,7 +3,6 @@ package api
 import "net/http"
 
 // taskHandler распределяет запросы /api/task по HTTP-методам.
-
 func taskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:

@@ -10,7 +10,6 @@ import (
 	"go_final_project/pkg/db"
 )
 
-// addTaskRequest — тело запроса POST /api/task.
 type addTaskRequest struct {
 	ID      string `json:"id"`
 	Date    string `json:"date"`
@@ -19,16 +18,15 @@ type addTaskRequest struct {
 	Repeat  string `json:"repeat"`
 }
 
-// addTaskHandler обрабатывает добавление задачи.
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var req addTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, map[string]string{"error": "ошибка десериализации JSON: " + err.Error()})
+		writeError(w, http.StatusBadRequest, "ошибка десериализации JSON: "+err.Error())
 		return
 	}
 
 	if req.Title == "" {
-		writeJSON(w, map[string]string{"error": "не указан заголовок задачи"})
+		writeError(w, http.StatusBadRequest, "не указан заголовок задачи")
 		return
 	}
 
@@ -40,20 +38,19 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := checkDate(task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	id, err := db.AddTask(task)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": "ошибка добавления задачи: " + err.Error()})
+		writeError(w, http.StatusInternalServerError, "ошибка добавления задачи: "+err.Error())
 		return
 	}
 
-	writeJSON(w, map[string]string{"id": strconv.FormatInt(id, 10)})
+	writeJSON(w, http.StatusOK, map[string]string{"id": strconv.FormatInt(id, 10)})
 }
 
-// checkDate проверяет и при необходимости корректирует дату задачи.
 func checkDate(task *db.Task) error {
 	now := time.Now()
 

@@ -6,19 +6,18 @@ import (
 	"go_final_project/pkg/db"
 )
 
-// getTaskHandler возвращает задачу по id.
 func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	if id == "" {
-		writeJSON(w, map[string]string{"error": "не указан идентификатор"})
+		writeError(w, http.StatusBadRequest, "не указан идентификатор")
 		return
 	}
 
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	writeJSON(w, task)
+	writeJSON(w, http.StatusOK, task)
 }

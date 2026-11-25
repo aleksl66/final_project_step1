@@ -6,18 +6,17 @@ import (
 	"go_final_project/pkg/db"
 )
 
-// deleteTaskHandler удаляет задачу по id.
 func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	if id == "" {
-		writeJSON(w, map[string]string{"error": "не указан идентификатор"})
+		writeError(w, http.StatusBadRequest, "не указан идентификатор")
 		return
 	}
 
 	if err := db.DeleteTask(id); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	writeJSON(w, map[string]string{})
+	writeJSON(w, http.StatusOK, map[string]string{})
 }

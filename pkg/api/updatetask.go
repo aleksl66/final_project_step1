@@ -7,20 +7,19 @@ import (
 	"go_final_project/pkg/db"
 )
 
-// updateTaskHandler обновляет задачу.
 func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var req addTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, map[string]string{"error": "ошибка десериализации JSON: " + err.Error()})
+		writeError(w, http.StatusBadRequest, "ошибка десериализации JSON: "+err.Error())
 		return
 	}
 
 	if req.ID == "" {
-		writeJSON(w, map[string]string{"error": "не указан идентификатор"})
+		writeError(w, http.StatusBadRequest, "не указан идентификатор")
 		return
 	}
 	if req.Title == "" {
-		writeJSON(w, map[string]string{"error": "не указан заголовок задачи"})
+		writeError(w, http.StatusBadRequest, "не указан заголовок задачи")
 		return
 	}
 
@@ -33,14 +32,14 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := checkDate(task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := db.UpdateTask(task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	writeJSON(w, map[string]string{})
+	writeJSON(w, http.StatusOK, map[string]string{})
 }
